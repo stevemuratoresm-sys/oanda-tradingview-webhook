@@ -25,7 +25,7 @@ instrument = data.get("instrument")
 units = data.get("units")
 
 if action not in ["BUY", "SELL"]:
-return jsonify({"error": "Invalid action"}), 400
+    return jsonify({"error": "Invalid action"}), 400
 
 try:
 units = int(units)
