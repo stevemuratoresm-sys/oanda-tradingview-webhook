@@ -28,7 +28,7 @@ if action not in ["BUY", "SELL"]:
     return jsonify({"error": "Invalid action"}), 400
 
 try:
-units = int(units)
+    units = int(units)
 except:
 return jsonify({"error": "Invalid units"}), 400
 
