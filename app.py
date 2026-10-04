@@ -1,10 +1,18 @@
-from flask import Flask
+from flask import Flask, request
 import os
+import requests
 
 app = Flask(__name__)
 
-OANDA_TOKEN = os.environ["OANDA_TOKEN"]
-OANDA_ACCOUNT_ID = os.environ["OANDA_ACCOUNT_ID"]
-
 @app.route("/")
 def home(): return "OANDA webhook is running"
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+token = os.environ.get("OANDA_TOKEN")
+account_id = os.environ.get("OANDA_ACCOUNT_ID")
+
+if not token or not account_id:
+return "OANDA credentials missing", 500
+
+return "Webhook ready"
