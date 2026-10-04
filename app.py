@@ -14,11 +14,9 @@ headers = {
 "Content-Type": "application/json"
 }
 
-
 @app.route("/webhook", methods=["POST"])
 def webhook():
-data = request.get_json(silent=True)
-
+    data = request.get_json(silent=True)
 if not data:
 return jsonify({"error": "No JSON received"}), 400
 
@@ -58,11 +56,9 @@ timeout=2
 
 return jsonify(response.json()), response.status_code
 
-
 @app.route("/", methods=["GET"])
 def home():
 return "OANDA webhook is running"
-
 
 if __name__ == "__main__":
 app.run(
