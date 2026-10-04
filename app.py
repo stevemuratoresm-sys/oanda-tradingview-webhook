@@ -17,8 +17,8 @@ headers = {
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json(silent=True)
-if not data:
-return jsonify({"error": "No JSON received"}), 400
+    if not data:
+        return jsonify({"error": "No JSON received"}), 400
 
 action = data.get("action")
 instrument = data.get("instrument")
