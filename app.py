@@ -1,13 +1,11 @@
-from flask import Flask
-import os
+from flask import Flask, request
 
 app = Flask(__name__)
-
-OANDA_TOKEN = os.environ["OANDA_TOKEN"]
-OANDA_ACCOUNT_ID = os.environ["OANDA_ACCOUNT_ID"]
 
 @app.route("/")
 def home(): return "OANDA webhook is running"
 
 @app.route("/webhook", methods=["POST"])
-def webhook(): return "Webhook received"
+def webhook():
+return "Webhook received"
+
