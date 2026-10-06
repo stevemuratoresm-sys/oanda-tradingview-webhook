@@ -12,6 +12,27 @@ def home():
     return "OANDA webhook is running"
 
 
+@app.route("/test")
+def test():
+    token = os.environ.get("OANDA_TOKEN")
+    account_id = os.environ.get("OANDA_ACCOUNT_ID")
+
+    if not token or not account_id:
+        return jsonify({"error": "OANDA credentials missing"}), 500
+
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    response = requests.get(
+        f"{OANDA_URL}/accounts/{account_id}",
+        headers=headers,
+        timeout=10
+    )
+
+    return jsonify(response.json()), response.status_code
+
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     token = os.environ.get("OANDA_TOKEN")
