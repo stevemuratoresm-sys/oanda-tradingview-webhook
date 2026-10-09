@@ -1,88 +1,77 @@
-from flask import Flask, request, jsonify
 import os
 import requests
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-OANDA_URL = "https://api-fxpractice.oanda.com/v3"
+# Hardcoded OANDA Production Credentials
+OANDA_API_URL = "https://oanda.com"  # Change to fxpractice if on a demo account
+ACCOUNT_ID = "YOUR_ACCOUNT_ID"                      # Paste your real OANDA ID inside the quotes
+API_TOKEN = "YOUR_OANDA_API_TOKEN"                 # Paste your real bearer token inside the quotes
 
-
-@app.route("/")
-def home():
-    return "OANDA webhook is running"
-
-
-@app.route("/test")
-def test():
-    token = os.environ.get("OANDA_TOKEN")
-    account_id = os.environ.get("OANDA_ACCOUNT_ID")
-
-    if not token or not account_id:
-        return jsonify({"error": "OANDA credentials missing"}), 500
-
-    headers = {
-        "Authorization": f"Bearer {token}"
-    }
-
-    response = requests.get(
-        f"{OANDA_URL}/accounts/{account_id}",
-        headers=headers,
-        timeout=10
-    )
-
-    return jsonify(response.json()), response.status_code
-
-
-@app.route("/webhook", methods=["POST"])
+@app.route('/', methods=['POST'])
 def webhook():
-    token = os.environ.get("OANDA_TOKEN")
-    account_id = os.environ.get("OANDA_ACCOUNT_ID")
-
-    if not token or not account_id:
-        return jsonify({"error": "OANDA credentials missing"}), 500
-
-    data = request.get_json(silent=True)
-
+    data = request.get_json()
     if not data:
-        return jsonify({"error": "No JSON received"}), 400
+        return jsonify({"error": "No JSON payload received"}), 400
 
-    action = data.get("action")
-    instrument = data.get("instrument")
-    units = data.get("units")
+    action = data.get("action")   # BUY or SELL
+    ticker = data.get("ticker")   # EURUSD, AUDUSD, etc.
+    units = data.get("units")     # Base unit volume sizing (1000)
+    sl = data.get("sl")           # Midpoint value string passed from chart
 
+    if not action or not ticker or not units:
+        return jsonify({"error": "Missing required execution keys"}), 400
+
+    # Ensure action strings match up properly
+    action = action.upper()
     if action not in ["BUY", "SELL"]:
-        return jsonify({"error": "Invalid action"}), 400
+        return jsonify({"error": "Invalid action value"}), 400
 
     try:
         units = int(units)
-    except:
-        return jsonify({"error": "Invalid units"}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid units parameter"}), 400
 
+    # OANDA treats short orders as a negative unit volume value
     if action == "SELL":
         units = -abs(units)
-    else:
-        units = abs(units)
 
-    order = {
+    # Format ticker strings for OANDA format (e.g., EUR_USD)
+    if len(ticker) == 6:
+        ticker = f"{ticker[:3]}_{ticker[3:]}"
+
+    # Setup the live market order transaction request structure
+    headers = {
+        "Authorization": f"Bearer {API_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    order_payload = {
         "order": {
-            "type": "MARKET",
-            "instrument": instrument,
             "units": str(units),
+            "instrument": ticker.upper(),
             "timeInForce": "FOK",
+            "type": "MARKET",
             "positionFill": "DEFAULT"
         }
     }
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
+    # Inject your midpoint stop-loss if it was cleanly calculated by the bot
+    if sl and sl != "na":
+        try:
+            sl_price = round(float(sl), 5)
+            order_payload["order"]["stopLossOnFill"] = {"price": str(sl_price)}
+        except ValueError:
+            pass
 
-    response = requests.post(
-        f"{OANDA_URL}/accounts/{account_id}/orders",
-        headers=headers,
-        json=order,
-        timeout=10
-    )
+    # Ship the transaction straight to OANDA's execution server
+    try:
+        url = f"{OANDA_API_URL}/accounts/{ACCOUNT_ID}/orders"
+        response = requests.post(url, json=order_payload, headers=headers, timeout=10)
+        return jsonify({"status": "Success", "oanda_response": response.json()}), response.status_code
+    except Exception as e:
+        return jsonify({"status": "Failed", "error": str(e)}), 500
 
-    return jsonify(response.json()), response.status_code
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)
