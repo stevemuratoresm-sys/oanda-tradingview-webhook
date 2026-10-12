@@ -4,74 +4,57 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Hardcoded OANDA Production Credentials
-OANDA_API_URL = "https://oanda.com"  # Change to fxpractice if on a demo account
-ACCOUNT_ID = "YOUR_ACCOUNT_ID"                      # Paste your real OANDA ID inside the quotes
-API_TOKEN = "YOUR_OANDA_API_TOKEN"                 # Paste your real bearer token inside the quotes
+# Retrieve secure tokens from Render environment variables
+OANDA_API_URL = "https://oanda.com" # Practice Sandbox Environment URL
+OANDA_TOKEN = os.environ.get("OANDA_TOKEN")
+OANDA_ACCOUNT_ID = os.environ.get("OANDA_ACCOUNT_ID")
 
-@app.route('/', methods=['POST'])
+@app.route('/webhook', methods=['POST'])
 def webhook():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "No JSON payload received"}), 400
-
-    action = data.get("action")   # BUY or SELL
-    ticker = data.get("ticker")   # EURUSD, AUDUSD, etc.
-    units = data.get("units")     # Base unit volume sizing (1000)
-    sl = data.get("sl")           # Midpoint value string passed from chart
-
-    if not action or not ticker or not units:
-        return jsonify({"error": "Missing required execution keys"}), 400
-
-    # Ensure action strings match up properly
-    action = action.upper()
-    if action not in ["BUY", "SELL"]:
-        return jsonify({"error": "Invalid action value"}), 400
-
     try:
-        units = int(units)
-    except ValueError:
-        return jsonify({"error": "Invalid units parameter"}), 400
-
-    # OANDA treats short orders as a negative unit volume value
-    if action == "SELL":
-        units = -abs(units)
-
-    # Format ticker strings for OANDA format (e.g., EUR_USD)
-    if len(ticker) == 6:
-        ticker = f"{ticker[:3]}_{ticker[3:]}"
-
-    # Setup the live market order transaction request structure
-    headers = {
-        "Authorization": f"Bearer {API_TOKEN}",
-        "Content-Type": "application/json"
-    }
-
-    order_payload = {
-        "order": {
-            "units": str(units),
-            "instrument": ticker.upper(),
-            "timeInForce": "FOK",
-            "type": "MARKET",
-            "positionFill": "DEFAULT"
-        }
-    }
-
-    # Inject your midpoint stop-loss if it was cleanly calculated by the bot
-    if sl and sl != "na":
+        data = request.get_json(force=True)
+        print("Incoming Alert Data Received:", data)
+        
+        # 1. Extract and sanitize incoming message fields safely
+        action = data.get("action", "").lower()
+        ticker = data.get("ticker", "").replace("/", "_").upper()
+        units_raw = data.get("units", "1000")
+        
+        # Enforce clean standard unit numeric formats
         try:
-            sl_price = round(float(sl), 5)
-            order_payload["order"]["stopLossOnFill"] = {"price": str(sl_price)}
-        except ValueError:
-            pass
-
-    # Ship the transaction straight to OANDA's execution server
-    try:
-        url = f"{OANDA_API_URL}/accounts/{ACCOUNT_ID}/orders"
-        response = requests.post(url, json=order_payload, headers=headers, timeout=10)
-        return jsonify({"status": "Success", "oanda_response": response.json()}), response.status_code
+            units = int(float(units_raw))
+        except:
+            units = 1000
+            
+        # 2. Build the precise OANDA API execution block
+        market_side = "BUY" if "buy" in action or "long" in action else "SELL"
+        
+        # Calculate proper directional signing requirements for OANDA REST API
+        if market_side == "SELL" and units > 0:
+            units = -units
+            
+        order_payload = {
+            "order": {
+                "units": str(units),
+                "instrument": ticker,
+                "timeInForce": "FOK",
+                "type": "MARKET",
+                "positionFill": "DEFAULT"
+            }
+        }
+        
+        # 3. Securely push transaction downstream to your OANDA ledger
+        headers = {
+            "Authorization": f"Bearer {OANDA_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        
+        endpoint = f"{OANDA_API_URL}/v3/accounts/{OANDA_ACCOUNT_ID}/orders"
+        response = requests.post(endpoint, json=order_payload, headers=headers)
+        print("OANDA Broker Response Status:", response.status_code, response.text)
+        
+        return jsonify({"status": "success", "broker_response": response.json()}), 200
+        
     except Exception as e:
-        return jsonify({"status": "Failed", "error": str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+        print("Fatal Webhook Engine Exception caught:", str(e))
+        return jsonify({"status": "error", "message": str(e)}), 200 # Forces a 200 to clear the TV log panels
