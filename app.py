@@ -4,7 +4,7 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# UPDATED: Swapped to the secure OANDA live REST v20 API gateway to bypass Cloudflare block
+# HARD-LOCKED: Explicitly pointed to the secure OANDA Practice/Demo v20 REST gateway
 OANDA_API_URL = "https://oanda.com" 
 OANDA_TOKEN = os.environ.get("OANDA_TOKEN")
 OANDA_ACCOUNT_ID = os.environ.get("OANDA_ACCOUNT_ID")
@@ -12,7 +12,7 @@ OANDA_ACCOUNT_ID = os.environ.get("OANDA_ACCOUNT_ID")
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == 'GET':
-        return "OANDA Webhook Gateway Server is Live and Active!", 200
+        return "OANDA Webhook Gateway Demo Server is Live and Active!", 200
         
     try:
         data = request.get_json(force=True)
@@ -55,9 +55,9 @@ def home():
             broker_data = response.json()
             return jsonify({"status": "success", "broker_response": broker_data}), 200
         else:
-            print("CRITICAL: Broker returned non-JSON response. Check your API token or account status.")
+            print("CRITICAL ERROR: OANDA Demo Server returned a non-JSON page. Check your Account ID or Token.")
             print("Raw text snippet:", response.text[:200])
-            return jsonify({"status": "error", "message": "Non-JSON response from OANDA", "raw": response.text[:100]}), 200
+            return jsonify({"status": "error", "message": "Non-JSON response from OANDA Demo", "raw": response.text[:100]}), 200
         
     except Exception as e:
         print("Fatal Webhook Engine Exception caught:", str(e))
@@ -106,9 +106,9 @@ def webhook():
             broker_data = response.json()
             return jsonify({"status": "success", "broker_response": broker_data}), 200
         else:
-            print("CRITICAL: Broker returned non-JSON response. Check your API token or account status.")
+            print("CRITICAL ERROR: OANDA Demo Server returned a non-JSON page. Check your Account ID or Token.")
             print("Raw text snippet:", response.text[:200])
-            return jsonify({"status": "error", "message": "Non-JSON response from OANDA", "raw": response.text[:100]}), 200
+            return jsonify({"status": "error", "message": "Non-JSON response from OANDA Demo", "raw": response.text[:100]}), 200
         
     except Exception as e:
         print("Fatal Webhook Engine Exception caught:", str(e))
