@@ -41,7 +41,6 @@ def home():
             }
         }
         
-        # UPDATED: Enforced browser identity strings to smash past the 403 Forbidden firewall block
         headers = {
             "Authorization": f"Bearer {OANDA_TOKEN}",
             "Content-Type": "application/json",
@@ -52,13 +51,11 @@ def home():
         response = requests.post(endpoint, json=order_payload, headers=headers)
         print("OANDA Broker Response Status:", response.status_code)
         
-        # SAFETY CHECK: Confirm response content is JSON before parsing to prevent crash
         if "application/json" in response.headers.get("Content-Type", ""):
             broker_data = response.json()
             return jsonify({"status": "success", "broker_response": broker_data}), 200
         else:
-            print("CRITICAL ERROR: OANDA Demo Server returned a non-JSON page. Check your Account ID, Token, or Headers.")
-            print("Raw text snippet:", response.text[:200])
+            print("CRITICAL ERROR: OANDA Demo Server returned a non-JSON page.")
             return jsonify({"status": "error", "message": "Non-JSON response from OANDA Demo", "raw": response.text[:100]}), 200
         
     except Exception as e:
@@ -94,7 +91,6 @@ def webhook():
             }
         }
         
-        # UPDATED: Enforced browser identity strings to smash past the 403 Forbidden firewall block
         headers = {
             "Authorization": f"Bearer {OANDA_TOKEN}",
             "Content-Type": "application/json",
@@ -105,13 +101,11 @@ def webhook():
         response = requests.post(endpoint, json=order_payload, headers=headers)
         print("OANDA Broker Response Status:", response.status_code)
         
-        # SAFETY CHECK: Confirm response content is JSON before parsing to prevent crash
         if "application/json" in response.headers.get("Content-Type", ""):
             broker_data = response.json()
             return jsonify({"status": "success", "broker_response": broker_data}), 200
         else:
-            print("CRITICAL ERROR: OANDA Demo Server returned a non-JSON page. Check your Account ID, Token, or Headers.")
-            print("Raw text snippet:", response.text[:200])
+            print("CRITICAL ERROR: OANDA Demo Server returned a non-JSON page.")
             return jsonify({"status": "error", "message": "Non-JSON response from OANDA Demo", "raw": response.text[:100]}), 200
         
     except Exception as e:
