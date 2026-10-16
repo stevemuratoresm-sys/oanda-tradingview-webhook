@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 # HARD-LOCKED: Points to the secure OANDA Practice/Demo v20 REST gateway
-OANDA_API_URL = "https://oanda.com" 
+ OANDA_API_URL = "https://api-fxpractice.oanda.com"
 OANDA_TOKEN = os.environ.get("OANDA_TOKEN")
 OANDA_ACCOUNT_ID = os.environ.get("OANDA_ACCOUNT_ID")
 
